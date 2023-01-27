@@ -1,0 +1,376 @@
+package com.example.worldcup;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.worldcup.provider.MatchTimeAdapter;
+import com.example.worldcup.provider.Result;
+import com.example.worldcup.provider.ResultAdapter;
+import com.example.worldcup.provider.ResultViewModel;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.StringTokenizer;
+
+
+public class MainActivity extends AppCompatActivity {
+
+
+    EditText team1;
+    EditText team2;
+    EditText score1;
+    EditText score2;
+    EditText match;
+    EditText name_venue;
+    EditText num_fans;
+
+
+    //     Week 5
+//    private DrawerLayout drawerlayout;
+//    private NavigationView navigationView;
+    Toolbar toolbar;
+
+
+
+    //week7
+    private ResultViewModel mResultViewModel;
+    ResultAdapter adapter;
+    TextView tv;
+    int count;
+
+    //week8
+    DatabaseReference myRef,mCondition;
+
+    // week 10
+
+    String Week10_TAG = "Week10_TAG";
+    int x1,y1;
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        switch(action) {
+            case (MotionEvent.ACTION_DOWN) :
+                Log.d(Week10_TAG,"Action was DOWN");
+                return true;
+            case (MotionEvent.ACTION_MOVE) :
+                Log.d(Week10_TAG,"Action was MOVE");
+                return true;
+            case (MotionEvent.ACTION_UP) :
+                Log.d(Week10_TAG,"Action was UP");
+                return true;
+            default :
+                return false;
+        }
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.draw_layout);
+
+        team1 = findViewById(R.id.titletext);
+        team2 = findViewById(R.id.yeartext);
+        score1 = findViewById(R.id.countrytext);
+        score2 = findViewById(R.id.genretext);
+        match = findViewById(R.id.costtext);
+        name_venue = findViewById(R.id.venue_main);
+        num_fans = findViewById(R.id.fans_main);;
+
+
+        //week4 Task 3
+        //sms
+        MyBroadCastReceiver myBroadCastReceiver = new MyBroadCastReceiver();
+        registerReceiver(myBroadCastReceiver, new IntentFilter(SMSReceiver.SMS_FILTER));
+
+        //Week 5
+        toolbar = findViewById(R.id.toolbar);
+        //build tool bar
+        setSupportActionBar(toolbar);// the right icon
+
+        //floating button
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                addResult();
+            }
+        });
+
+        //week 6
+//        recyclerView = findViewById(R.id.my_recycler_view);
+//
+//        layoutManager = new LinearLayoutManager(this);  //A RecyclerView.LayoutManager implementation which provides similar functionality to ListView.
+//        recyclerView.setLayoutManager(layoutManager);   // Also StaggeredGridLayoutManager and GridLayoutManager or a custom Layout manager
+//
+//        adapter = new MyRecyclerAdapter();
+//        adapter.setData(data);
+//        recyclerView.setAdapter(adapter);
+
+        //week7
+        RecyclerView recyclerView = findViewById(R.id.my_recycler_view);
+        tv = findViewById(R.id.count_id);
+        adapter = new ResultAdapter();
+        recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+
+        MatchTimeAdapter adapter_time = new MatchTimeAdapter();
+
+        mResultViewModel = new ViewModelProvider(this).get(ResultViewModel.class);
+        mResultViewModel.getAllResults().observe(this, newData -> {
+            adapter.setResult(newData);
+            adapter_time.setResult(newData);
+            adapter.notifyDataSetChanged();
+            count = newData.size();
+            tv.setText(count + "");
+        });
+
+
+
+        //    week8
+        myRef = FirebaseDatabase.getInstance().getReference();
+
+
+        View view=findViewById(R.id.view);
+        view.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                int action = event.getActionMasked();
+                int x=(int)event.getX();
+                int y=(int)event.getY();
+
+                switch(action) {
+                    case (MotionEvent.ACTION_DOWN) :
+                        x1 = x;
+                        y1 = y;
+                        Log.d(Week10_TAG,"Action was DOWN at x="+x+ " and y="+y);
+                        return true;
+                    case (MotionEvent.ACTION_MOVE) :
+                        Log.d(Week10_TAG,"Action was MOVE at x="+x+ " and y="+y);
+                        return true;
+                    case (MotionEvent.ACTION_UP) :
+                        Log.d(Week10_TAG,"Action was UP at x="+x+ " and y="+y);
+                        if ( Math.abs(x-x1) > 100 && Math.abs(y-y1) < 50  && Math.abs(x-x1) > Math.abs(y-y1)){
+                            Log.d(Week10_TAG,"HHHHHHHH");
+                            addResult();
+                        }
+
+                        if (Math.abs(y-y1) > 100 && Math.abs(x-x1) < 50 && Math.abs(x-x1) < Math.abs(y-y1) ){
+                            clearDatabase();
+                            mCondition.removeValue();
+                            Log.d(Week10_TAG,"VVVVVV");
+                        }
+
+
+                        return true;
+                    default :
+                        return false;
+                }
+            }
+        });
+
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mCondition = myRef.child("week8/matches");
+        mCondition.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
+        });
+
+    }
+
+    //week6
+//    public void addMatch() {
+//        Match match = new Match(team1.getText().toString(),team2.getText().toString(),score1.getText().toString(),score2.getText().toString(), this.match.getText().toString(), name_venue.getText().toString(), num_fans.getText().toString());
+//        //data.add(match);
+//        //adapter.notifyDataSetChanged();
+//
+//    }
+
+
+    //week7
+    public void addResult() {
+        Result result = new Result(team1.getText().toString(),team2.getText().toString(),score1.getText().toString(),score2.getText().toString(), this.match.getText().toString(), name_venue.getText().toString(), num_fans.getText().toString());
+        mResultViewModel.insert(result);
+        mCondition.push().setValue(result);
+    }
+
+
+    //week5
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.options_menu, menu);
+        return true;
+    }
+
+    public void clearButtonHandler(){
+        team1.setText("");
+        score2.setText("");
+        team2.setText("");
+        score1.setText("");
+        match.setText("");
+        name_venue.setText("");
+        num_fans.setText("");
+    }
+
+    public void clearDatabase(){
+        mResultViewModel.deleteAll();
+    }
+
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        //Toast.makeText(this, "The floating Fab get clicked "+ Integer.toString(fab_count) +" times", Toast.LENGTH_SHORT).show();
+        //Snackbar.make(getCurrentFocus(), "Item added to list",Snackbar.LENGTH_LONG).show();
+        int id=item.getItemId();
+        if (id == R.id.clear) {
+            //Toast.makeText(this, "Optional Menu clear fields", Toast.LENGTH_SHORT).show();
+            clearButtonHandler();
+        }
+        else if (id == R.id.remove_last_menu_id) {
+
+            for (int i=0 ; i<count; i++){
+                mCondition.push().setValue(mResultViewModel.getAllResults().getValue().get(i));
+            }
+//            //week7
+//            for(int i = 0; i < mResultViewModel.getAllResults().getValue().size(); i++){
+//                Result current_result = mResultViewModel.getAllResults().getValue().get(i);
+//                if (Integer.parseInt(current_result.getScore1()) == Integer.parseInt(current_result.getScore2()))
+//                    mResultViewModel.getAllResults().getValue().remove(i);
+//            }
+//            adapter.notifyDataSetChanged();
+//            tv.setText(mResultViewModel.getAllResults().getValue().size() + "");
+
+            //week6
+//            for(int i = 0; i < data.size(); i++){
+//                //Log.i("week6", data.get(i).getScore1() +" " +data.get(i).getScore2());
+//                if (Integer.parseInt(data.get(i).getScore1()) == Integer.parseInt(data.get(i).getScore2())){
+//                    data.remove(i);
+//                    //Log.i("week6", "true");
+//                }
+//
+//            }
+
+            //adapter.notifyDataSetChanged();
+        }
+        else if (id == R.id.clear_fields_menu_id){
+            clearDatabase();
+            mCondition.removeValue();
+        }
+        else if (id == R.id.database){
+            setContentView(R.layout.database_view);
+            RecyclerView recycle = findViewById(R.id.database_recyclerview);
+            ResultAdapter _adapter = new ResultAdapter();
+            recycle.setAdapter(_adapter);
+            recycle.setLayoutManager(new LinearLayoutManager(this));
+
+            RecyclerView recycle_time = findViewById(R.id.database_recycle_matchtime);
+            MatchTimeAdapter _adapter_time = new MatchTimeAdapter();
+            recycle_time.setAdapter(_adapter_time);
+            recycle_time.setLayoutManager(new LinearLayoutManager(this));
+
+            mResultViewModel.getAllResults().observe(this, newData -> {
+                _adapter.setResult(newData);
+                _adapter.notifyDataSetChanged();
+                List<Result> temp_data=  new ArrayList<Result>(newData);
+                for (int i =0; i < temp_data.size(); i++){
+                    if (Integer.parseInt(temp_data.get(i).getVenue()) <= 5){
+                        temp_data.remove(i);
+                    }
+                }
+                _adapter_time.setResult(temp_data);
+
+            });
+
+
+        }
+        return true;
+    }
+
+
+
+    //week4
+    class MyBroadCastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            /*
+             * Retrieve the message from the intent
+             * */
+
+            String msg = intent.getStringExtra(SMSReceiver.SMS_MSG_KEY);
+
+            StringTokenizer sT = new StringTokenizer(msg,";");
+
+            String sms_title = sT.nextToken();
+            String sms_year = sT.nextToken();
+            String sms_country = sT.nextToken();
+            String sms_genre = sT.nextToken();
+            String sms_cost = sT.nextToken();
+            String sms_venue = sT.nextToken();
+            String sms_fans = sT.nextToken();
+
+            team1.setText(sms_title);
+            team2.setText(sms_year);
+            score1.setText(sms_country);
+            score2.setText(sms_genre);
+            match.setText(sms_cost);
+            name_venue.setText(sms_venue);
+            num_fans.setText(sms_fans);
+        }
+
+    }
+
+}
+
+
+
